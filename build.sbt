@@ -1,6 +1,6 @@
-import com.typesafe.startscript.StartScriptPlugin
+import com.typesafe.sbt.SbtStartScript
 
-seq(StartScriptPlugin.startScriptForClassesSettings: _*)
+seq(SbtStartScript.startScriptForClassesSettings: _*)
 
 organization  := "com.example"
 
@@ -19,6 +19,7 @@ libraryDependencies ++= {
   val akkaV = "2.1.4"
   val sprayV = "1.1-RC3"
   Seq(
+    "io.spray"            %   "spray-http"    % sprayV,
     "io.spray"            %   "spray-can"     % sprayV,
     "io.spray"            %   "spray-routing" % sprayV,
     "io.spray"            %   "spray-testkit" % sprayV,
