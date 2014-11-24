@@ -34,7 +34,22 @@ trait RestfulDotaService extends HttpService {
   val index = path("") {
     get {
       respondWithMediaType(MediaTypes.`text/html`) {
-        complete(wrapInHtmlIndex("Just start clicking"))
+        complete(wrapInHtmlIndex(
+          s"""A little guide:<br>
+             | This is a little site for The International 4 Dota 2 tournament
+             |<ul>
+             |<li> /heroes - all the heroes used in TI4 </li>
+             |<li> /teams - all the teams, which participated in TI4 </li>
+             |<li> /matches - all the matches of TI4 </li>
+             |<li> /heroes/heroId - gives you matches in which the hero with heroId was used </li>
+             |<li> /teams/teamId - gives you matches in which the team with teamId participated </li>
+             |<li> /tasks/taskId - GET shows the result of the task with taskId <br> DELETE deletes the said task </li>
+             | all of the above are available by clicking on links or manually typing the address in HTML, XML, JSON or plaintext
+             |<li> /tasks - shows currently available tasks </li>
+             |<li> /tasks/teamId/heroId - PUT add the task to list all matches in which both team with teamId and hero with heroId participated </li>
+             |<li> /tasks/taskId/teamId/heroId - POST modifies the task with taskId </li>
+             |</ul>
+           """.stripMargin))
       }
     }
   }
