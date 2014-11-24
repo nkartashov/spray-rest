@@ -8,12 +8,22 @@ import com.restful.Data
  * Time: 21:47
  */
 case class Task(taskId: Int, teamId: Int, heroId: Int) {
-  def matchesWithTeamAndHero() = Data.matchObjects.filter(m => m.participates(teamId) && m.heroParticipates(heroId))
+  def resultingMatches() = Data.matchObjects.filter(m => m.participates(teamId) && m.heroParticipates(heroId))
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case Task(otherId,_,_) => taskId == otherId
+    case _ => false
+  }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    taskId + (teamId + heroId * prime) * prime
+  }
 }
 
 object Task {
   var taskId = 0
-  def newTask(teamId: Int, heroId: Int) = {
+  def newTask(teamId: Int, heroId: Int) = synchronized {
     val task = new Task(taskId, teamId, heroId)
     taskId += 1
     task

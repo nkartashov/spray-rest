@@ -14,7 +14,7 @@ object MatchesRenderer extends AbstractRenderer[Match] {
     i => (time % Math.pow(itemsInTimeUnit, i).toInt / Math.pow(itemsInTimeUnit, i - 1).toInt).toString).mkString(":")
 
   def teamToHtml(team: Team, heroes: List[Hero]): String =
-    s"""<a href="/matches/${team.teamId}">${team.teamName}</a>""" + "<br>" +
+    s"""<a href="/teams/${team.teamId}">${team.teamName}</a>""" + "<br>" +
       heroes.map(h => s"""<a href="/heroes/${h.heroId}"><img height=24 width=43 src="/img/${h.iconSourcePath}"></a>""").mkString("")
 
   def teamToXml(team: Team, heroes: List[Hero]): String =
