@@ -3,8 +3,7 @@ package com.restful
 import akka.actor.Actor
 import com.restful.entitites.TaskManager
 import com.restful.rendering.{AbstractRenderer, HeroesRenderer, MatchesRenderer, TeamsRenderer}
-import spray.http.MediaTypes
-import spray.http.StatusCodes.Found
+import spray.http.{MediaTypes, StatusCodes}
 import spray.routing._
 
 import scala.collection.JavaConversions.enumerationAsScalaIterator
@@ -50,8 +49,8 @@ trait RestfulDotaService extends HttpService {
              |<li> /tasks/taskId/teamId/heroId - POST modifies the task with taskId </li>
              |</ul>
            """.stripMargin))
-      }
-    }
+      } ~ complete(StatusCodes.NotAcceptable)
+    } ~ complete(StatusCodes.MethodNotAllowed)
   }
 
   def renderObjects[T](renderer: AbstractRenderer[T], objects: List[T]) = {
@@ -66,16 +65,16 @@ trait RestfulDotaService extends HttpService {
       } ~
       respondWithMediaType(MediaTypes.`text/plain`) {
         complete(renderer.txt(objects))
-      }
+      } ~ complete(StatusCodes.NotAcceptable)
   }
 
   def renderedPaths[T](pathString: String, renderer: AbstractRenderer[T], objects: List[T]) = {
-    get {
-      path(pathString) {
+    path(pathString) {
+      get {
         logRequest(pathString) {
           renderObjects(renderer, objects)
         }
-      }
+      } ~ complete(StatusCodes.MethodNotAllowed)
     }
   }
 
@@ -90,11 +89,11 @@ trait RestfulDotaService extends HttpService {
   val heroes = renderedPaths("heroes", HeroesRenderer, Data.heroObjects) ~
     path("heroes" / IntNumber) {
       heroId =>
-        logRequest("heroes" + "/" + heroId) {
+        logRequest(s"heroes/$heroId") {
           get {
             renderObjects(MatchesRenderer, Data.matchObjects.filter(_.heroParticipates(heroId)))
           }
-        }
+        } ~ complete(StatusCodes.MethodNotAllowed)
     }
 
   val matches = renderedPaths("matches", MatchesRenderer, Data.matchObjects)
@@ -102,10 +101,10 @@ trait RestfulDotaService extends HttpService {
   val teams = renderedPaths("teams", TeamsRenderer, Data.teamObjects) ~
     path("teams" / IntNumber) {
       teamId =>
-        logRequest("teams" + "/" + teamId) {
+        logRequest(s"teams/$teamId") {
           get {
             renderObjects(MatchesRenderer, Data.matchObjects.filter(_.participates(teamId)))
-          }
+          } ~ complete(StatusCodes.MethodNotAllowed)
         }
     }
 
@@ -129,65 +128,55 @@ trait RestfulDotaService extends HttpService {
     complete(wrapInHtmlIndex(s"Successfully changed task with id $taskId"))
   }
 
-  val tasks = get {
-    path("tasks" / IntNumber) {
-      taskId =>
-        logRequest("tasks" + "/" + taskId) {
-          TaskManager.getTask(taskId) match {
-            case Some(task) => renderObjects(MatchesRenderer, task.resultingMatches())
-            case _ => noTaskWithId(taskId)
-          }
-        }
-    } ~
-      path("tasks") {
-        logRequest("tasks") {
-          complete(wrapInHtmlIndex(s"Present task ids: <br>" + "<ul>" +
-            TaskManager.taskMap.keys().toList.sorted.map(i => s"<li>$i</li>").mkString("") + "</ul>"))
-        }
+  val tasks = path("tasks") {
+    get {
+      logRequest("tasks") {
+        complete(wrapInHtmlIndex(s"Present task ids: <br>" + "<ul>" +
+          TaskManager.taskMap.keys().toList.sorted.map(i => s"<li>$i</li>").mkString("") + "</ul>"))
       }
+    } ~ complete(StatusCodes.MethodNotAllowed)
   } ~
     delete {
       path("tasks" / IntNumber) {
         taskId =>
-          logRequest("tasks" + "/" + taskId) {
+          logRequest(s"tasks/$taskId") {
             TaskManager.removeTask(taskId) match {
               case Some(_) => successfulDelete(taskId)
               case _ => noTaskWithId(taskId)
             }
           }
-      }
-    } ~
-    put {
-      path("tasks" / IntNumber / IntNumber) {
-        (teamId, heroId) =>
-          logRequest("tasks" + "/" + teamId + "/" + heroId)
-          successfulAdd(TaskManager.newTask(teamId, heroId).taskId)
-      }
-    } ~
+      } ~ complete(StatusCodes.MethodNotAllowed)
+    } ~ get {
+    path("tasks" / IntNumber) {
+      taskId =>
+        logRequest(s"tasks/$taskId") {
+          TaskManager.getTask(taskId) match {
+            case Some(task) => renderObjects(MatchesRenderer, task.resultingMatches())
+            case _ => noTaskWithId(taskId)
+          }
+        }
+    } ~ complete(StatusCodes.MethodNotAllowed)
+  } ~ put {
+    path("tasks" / IntNumber / IntNumber) {
+      (teamId, heroId) => {
+        logRequest(s"tasks/$teamId/$heroId")
+        successfulAdd(TaskManager.newTask(teamId, heroId).taskId)
+      } ~ complete(StatusCodes.MethodNotAllowed)
+    }
+  } ~
     post {
       path("tasks" / IntNumber / IntNumber / IntNumber) {
         (taskId, teamId, heroId) =>
-          logRequest("tasks" + "/" + taskId + "/" + teamId + "/" + heroId) {
+          logRequest(s"tasks/$taskId/$teamId/$heroId") {
             TaskManager.updateTask(taskId, teamId, heroId) match {
               case None => noTaskWithId(taskId)
               case Some(task) => successfulPost(taskId)
             }
           }
-      }
+      } ~ complete(StatusCodes.MethodNotAllowed)
     }
 
-  val unmatchedRedirect = unmatchedPath {
-    ump =>
-      logRequest("unmatched") {
-        redirect(applicationAddress, Found)
-      }
+  val routes = rejectEmptyResponse {
+    index ~ images ~ heroes ~ matches ~ teams ~ tasks
   }
-
-  val stats = path("stats") {
-    get {
-      complete("")
-    }
-  }
-
-  val routes = index ~ images ~ heroes ~ matches ~ teams ~ tasks ~ stats ~ unmatchedRedirect
 }
