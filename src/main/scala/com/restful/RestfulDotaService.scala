@@ -131,8 +131,11 @@ trait RestfulDotaService extends HttpService {
   val tasks = path("tasks") {
     get {
       logRequest("tasks") {
-        complete(wrapInHtmlIndex(s"Present task ids: <br>" + "<ul>" +
-          TaskManager.taskMap.keys().toList.sorted.map(i => s"<li>$i</li>").mkString("") + "</ul>"))
+        respondWithMediaType(MediaTypes.`text/html`) {
+          complete(wrapInHtmlIndex(s"Present task ids: <br>" + "<ul>" +
+            TaskManager.taskMap.keys().toList.sorted.map(i => s"<li>$i</li>").mkString("") + "</ul>")
+          )
+        }
       }
     } ~ complete(StatusCodes.MethodNotAllowed)
   } ~
